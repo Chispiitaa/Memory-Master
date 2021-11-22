@@ -18,14 +18,21 @@ const morgan = require("morgan");
 //usamos el framework
 const app = express();
 
+
+//en donde esta a carpeta views
+app.set('views', path.join(__dirname, '/views'));
+//configurar las vistas de la aplicacion (motor de plantillas)
+app.set('view engine', 'ejs');
+
 const bodyParser = require("body-parser");
 var urlencodedParser = bodyParser.urlencoded({ extended: false });
 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 
+
 //conectar a mysql
-var db = mysql.createConnection({
+const db = mysql.createConnection({
   host: "localhost",
   user: "root",
   password: "root1234",
@@ -57,22 +64,53 @@ app.get("/", (req, res) => {
 });
 
 
+
+app.get('/mostrar', urlencodedParser, function(req, res){
+		db.query(`SELECT * FROM usuario WHERE user = ? AND password = ?`, [username, password], function(error, results, fields) {
+			if (results.length > 0) {
+				request.session.loggedin = true;
+				request.session.username = username;
+				response.redirect("/menu");
+			} else {
+				response.redirect("/errorInicio.html");
+			}			
+			response.end();
+		});
+});
+
+
+//funcion para registrar al usuario
 app.post('/registrar', urlencodedParser, function (req, res) {
-  console.log("Im here");
-  console.log(req.body.name);
-  console.log(req.body.appat);
-  console.log(req.body.apmat);
-  console.log(req.body.user);
-  console.log(req.body.password);
-  db.connect(function (err) {
-      console.log("connected");
-      let sql = "INSERT INTO `usuario` (`nombre`, `appat`, `apmat`, `user`, `password`) VALUES ('" + req.body.name + "', '" + req.body.appat + "', '" + req.body.apmat + "', '" + req.body.user + "', '" + req.body.password + "')";
-      db.query(sql, function (err, result) {
-          if(err){
-            res.json(err);
-          };
-        console.log("Añadido");
-      });
+  let reNom = /[a-zA-Z]/;
+  let reAppat = /[a-zA-Z]/;
+  let reApmat = /[a-zA-Z]/;
+  let reUser = /[a-zA-Z]/;
+  let rePass = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*#?&])[A-Za-z\d@$!%*#?&]{8,}$/;
+    
+  db.connect(function (err){
+    let sql = "INSERT INTO `usuario` (`nombre`, `appat`, `apmat`, `user`, `password`) VALUES ('" + req.body.name + "', '" + req.body.appat + "', '" + req.body.apmat + "', '" + req.body.user + "', '" + req.body.password + "')";
+    console.log("conectado");
+    db.query(sql, function (err, result) {
+      if(err){
+        res.json(err);
+      };
+    console.log("Añadido");
+    });
+    if(!reNom){
+      res.json({success: "El nombre solo debe contener letras"});
+    }
+    if(!reAppat){
+      res.json({success: "El nombre solo debe contener letras"});
+    }
+    if(!reApmat){
+      res.json({success: "El nombre solo debe contener letras"});
+    }
+    if(!reUser){
+      res.json({success: "El nombre solo debe contener letras"});
+    }
+    if(!rePass){
+      res.json({success: "La contraseña debe de ser mayor a 8 caracteres, contener un caracter especial y mayusculas"});
+    }
   });
   res.sendFile(__dirname + "/public/login.html");
 });
@@ -86,20 +124,20 @@ app.post('/auth', function(request, response) {
 			if (results.length > 0) {
 				request.session.loggedin = true;
 				request.session.username = username;
-				response.redirect("/menu.html");
+				response.redirect("/menu");
 			} else {
-				response.send('Incorrect Username and/or Password!');
+				response.redirect("/errorInicio.html");
 			}			
 			response.end();
 		});
 	} else {
-		response.send('Please enter Username and Password!');
+		response.redirect("/errorInicio.html");
 		response.end();
 	}
 });
 
 
-//funcion para registrar al usuario
+
 
 //establecemos el servidor
 app.set("port", process.env.PORT || 3000);
@@ -111,4 +149,59 @@ app.use(morgan("dev"));
 //Inicializamos el servidor
 app.listen(app.get("port"), () => {
   console.log(`Servidor escuchando desde el puerto  ${app.get("port")}`);
+});
+
+app.get('/menu', function(request, response) {
+
+	if (request.session.loggedin) {
+    var html= "";
+html+="<!DOCTYPE html>";
+html+="<html lang='en'>";
+html+="  <head>";
+html+="    <meta charset='UTF-8'>";
+html+="    <meta http-equiv='X-UA-Compatible' content='IE=edge'>";
+html+="   <meta name='viewport' content='width=device-width, initial-scale=1.0'></meta>"
+html+="    <title>Menu</title>";
+html+="    <link rel='stylesheet' href='./CSS/styleIndex.css'>";
+html+="  </head>";
+html+="  <body>";
+html+="<header class='bg_animate'>";
+html+="        <div class='header_nav'>";
+html+="            <div class='contenedor'>";
+html+="                <h1>"+request.session.username+"</h1>";
+html+="                <nav>"
+html+="                    <a href='perfil.html'>PERFIL</a>";
+html+="                    ";
+html+="                    <a href='login.html'>CERRAR SESIÓN</a>";
+html+="                </nav>";
+html+="            </div>";
+html+="        </div>";
+html+="";
+html+="        <section class='banner contenedor'>";
+html+="            <secrion class='banner_title'>";
+html+="                <a href='#' class='llamanos'>Comienza ya!</a>";
+html+="            </secrion>";
+html+="            <div class='banner_img'>";
+html+="                <img src='./img/kisspng-4-pics-1-word-word-brain-thought-action-game-snoring-transparent-png-5a76bf36785379.6988479815177316384929.png'>";
+html+="            </div>";
+html+="        </section>";
+html+="";
+html+="        <div class='burbujas'>";
+html+="            <div class='burbuja'></div>";
+html+="            <div class='burbuja'></div>";
+html+="            <div class='burbuja'></div>";
+html+="            <div class='burbuja'></div>";
+html+="            <div class='burbuja'></div>";
+html+="            <div class='burbuja'></div>";
+html+="            <div class='burbuja'></div>";
+html+="            <div class='burbuja'></div>";
+html+="            <div class='burbuja'></div>";
+html+="            <div class='burbuja'></div>";
+html+="        </div>";
+html+="    </header>";
+html+="  </body>";
+html+="</html>";
+html+="";
+		response.send(html);
+	} 
 });
